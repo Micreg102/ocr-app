@@ -1,20 +1,28 @@
 # OCR App
 
-A simple Docker-based OCR application powered by [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR). Upload an image through a React web UI and download the extracted text.
+A simple Docker-based OCR application with multiple engines. Upload an image or PDF through a React web UI and download the extracted text.
 
 ## Architecture
 
-- **Backend** — FastAPI + PaddleOCR (`POST /api/ocr`)
-- **Frontend** — React (Vite) with drag-and-drop upload
+- **Backend** — FastAPI with pluggable OCR engines (`POST /api/ocr`)
+- **Frontend** — React (Vite) with engine picker and drag-and-drop upload
 - **Reverse proxy** — Nginx serves the frontend and proxies `/api` to the backend
+
+## OCR engines
+
+| Engine | Type | Best for |
+|--------|------|----------|
+| **PaddleOCR** | Deep learning | Complex layouts, multilingual text |
+| **Tesseract** | Classic | Clean printed documents, speed |
+| **EasyOCR** | Deep learning | Photos, varied fonts |
+
+Models load on first use (lazy loading). The first request per engine downloads weights and may take a minute.
 
 ## Quick start
 
 ```bash
 docker compose up --build
 ```
-
-First startup downloads PaddleOCR models (~100 MB) and can take a few minutes.
 
 | Service  | URL                        |
 |----------|----------------------------|
@@ -24,13 +32,20 @@ First startup downloads PaddleOCR models (~100 MB) and can take a few minutes.
 
 ## API
 
+### `GET /api/engines`
+
+Returns available OCR engines and the default.
+
 ### `POST /api/ocr`
 
-Upload an image or PDF file as `multipart/form-data` with field `file`.
+Upload a file as `multipart/form-data`:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | yes | Image or PDF |
+| `engine` | no | `paddle`, `tesseract`, or `easyocr` (default: `paddle`) |
 
 **Supported formats:** PNG, JPG, JPEG, BMP, TIFF, WebP, PDF
-
-PDFs are converted to images internally (one page at a time) before OCR.
 
 **Response:**
 
@@ -39,29 +54,34 @@ PDFs are converted to images internally (one page at a time) before OCR.
   "filename": "document.pdf",
   "text": "--- Page 1 ---\nextracted text...",
   "line_count": 24,
-  "page_count": 3
+  "page_count": 3,
+  "engine": "paddle",
+  "engine_name": "PaddleOCR"
 }
 ```
 
 ### `GET /api/health`
 
-Returns service status and whether the OCR engine is loaded.
+Returns service status and list of available engine IDs.
 
 ## Frontend
 
-1. Drop or click to select an image or PDF
-2. Wait for PaddleOCR to process
-3. **Download result** (green) — saves a `.txt` file
-4. **New file** (blue) — resets for another upload
+1. Choose an OCR engine
+2. Drop or click to select an image or PDF
+3. Wait for processing
+4. **Download result** (green) — saves a `.txt` file
+5. **New file** (blue) — resets for another upload
 
 ## Configuration
 
 | Variable        | Default | Description                         |
 |-----------------|---------|-------------------------------------|
-| `OCR_LANG`      | `en`    | PaddleOCR language code             |
+| `OCR_LANG`      | `en`    | Language code for all engines       |
 | `PDF_RENDER_DPI`| `200`   | DPI for PDF-to-image conversion     |
 
-Change in `docker-compose.yml` under the `backend` service. Common values: `en`, `ch`, `fr`, `german`, `korean`, `japan`.
+Change in `docker-compose.yml` under the `backend` service.
+
+Language support varies per engine. Tesseract ships with English and Polish packs in Docker. For other Tesseract languages, add `tesseract-ocr-<lang>` to the backend Dockerfile.
 
 ## Local development
 
@@ -70,6 +90,7 @@ Change in `docker-compose.yml` under the `backend` service. Common values: `en`,
 ```bash
 cd backend
 pip install -r requirements.txt
+# Tesseract binary required on host (apt/brew install tesseract)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -88,11 +109,13 @@ The Vite dev server proxies `/api` to `http://localhost:8000`.
 ```
 ocr-app/
 ├── backend/
-│   ├── app/main.py       # FastAPI + PaddleOCR
+│   ├── app/
+│   │   ├── main.py
+│   │   └── engines/      # PaddleOCR, Tesseract, EasyOCR
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
-│   ├── src/App.jsx       # Upload UI
+│   ├── src/App.jsx
 │   ├── Dockerfile
 │   └── nginx.conf
 ├── docker-compose.yml
