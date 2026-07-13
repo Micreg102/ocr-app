@@ -23,3 +23,7 @@ Thumbs.db
 
 # Docker
 *.log
+logs/
+
+# Mac deploy
+.env.mac

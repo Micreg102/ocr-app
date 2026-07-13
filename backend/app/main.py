@@ -15,9 +15,18 @@ logger = logging.getLogger(__name__)
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp"}
 PDF_EXTENSIONS = {".pdf"}
 ALLOWED_EXTENSIONS = IMAGE_EXTENSIONS | PDF_EXTENSIONS
-DEFAULT_ENGINE = "paddle"
+DEFAULT_ENGINE = os.getenv("OCR_DEFAULT_ENGINE", "paddle")
 
 PDF_RENDER_DPI = int(os.getenv("PDF_RENDER_DPI", "200"))
+
+
+def resolved_default_engine() -> str:
+    enabled = {e.id for e in ENGINE_CATALOG}
+    if DEFAULT_ENGINE in enabled:
+        return DEFAULT_ENGINE
+    if enabled:
+        return next(iter(enabled))
+    return DEFAULT_ENGINE
 
 app = FastAPI(title="OCR App API", version="1.0.0")
 
@@ -68,19 +77,24 @@ async def list_engines():
             {"id": e.id, "name": e.name, "description": e.description}
             for e in ENGINE_CATALOG
         ],
-        "default": DEFAULT_ENGINE,
+        "default": resolved_default_engine(),
     }
 
 
 @app.post("/api/ocr")
 async def ocr_endpoint(
     file: UploadFile = File(...),
-    engine: str = Form(DEFAULT_ENGINE),
+    engine: str = Form(default=""),
 ):
-    if engine not in {e.id for e in ENGINE_CATALOG}:
+    if not ENGINE_CATALOG:
+        raise HTTPException(status_code=503, detail="No OCR engines are enabled")
+
+    selected_engine = engine or resolved_default_engine()
+
+    if selected_engine not in {e.id for e in ENGINE_CATALOG}:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown engine '{engine}'. Available: {', '.join(e.id for e in ENGINE_CATALOG)}",
+            detail=f"Unknown engine '{selected_engine}'. Available: {', '.join(e.id for e in ENGINE_CATALOG)}",
         )
 
     if not file.filename:
@@ -97,18 +111,18 @@ async def ocr_endpoint(
     if not contents:
         raise HTTPException(status_code=400, detail="Empty file")
 
-    engine_info = next(e for e in ENGINE_CATALOG if e.id == engine)
+    engine_info = next(e for e in ENGINE_CATALOG if e.id == selected_engine)
 
     try:
         if ext in PDF_EXTENSIONS:
             images = pdf_to_images(contents)
             if not images:
                 raise HTTPException(status_code=400, detail="PDF contains no pages")
-            text = run_ocr(images, engine)
+            text = run_ocr(images, selected_engine)
             page_count = len(images)
         else:
             image = Image.open(io.BytesIO(contents)).convert("RGB")
-            text = run_ocr([image], engine)
+            text = run_ocr([image], selected_engine)
             page_count = 1
     except HTTPException:
         raise
@@ -118,7 +132,7 @@ async def ocr_endpoint(
         if ext in PDF_EXTENSIONS:
             logger.exception("PDF processing failed")
             raise HTTPException(status_code=400, detail="Invalid or unreadable PDF file") from exc
-        logger.exception("OCR processing failed (engine=%s)", engine)
+        logger.exception("OCR processing failed (engine=%s)", selected_engine)
         raise HTTPException(status_code=500, detail="OCR processing failed") from exc
 
     return {
@@ -126,6 +140,6 @@ async def ocr_endpoint(
         "text": text,
         "line_count": len(text.splitlines()) if text else 0,
         "page_count": page_count,
-        "engine": engine,
+        "engine": selected_engine,
         "engine_name": engine_info.name,
     }

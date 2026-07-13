@@ -24,6 +24,18 @@ Models load on first use (lazy loading). The first request per engine downloads 
 docker compose up --build
 ```
 
+### Mac Studio (Apple Silicon)
+
+See **[DEPLOY-MAC.md](DEPLOY-MAC.md)** for native and Docker deployment on Mac Studio.
+
+```bash
+git checkout mac
+./scripts/mac/setup-native.sh    # native (recommended)
+./scripts/mac/start-native.sh
+# or
+./scripts/deploy-docker-mac.sh   # Docker
+```
+
 | Service  | URL                        |
 |----------|----------------------------|
 | Web UI   | http://localhost:3000      |
@@ -77,6 +89,9 @@ Returns service status and list of available engine IDs.
 | Variable        | Default | Description                         |
 |-----------------|---------|-------------------------------------|
 | `OCR_LANG`      | `en`    | Language code for all engines       |
+| `OCR_DEFAULT_ENGINE` | `paddle` | Default engine (`paddle`, `tesseract`, `easyocr`) |
+| `OCR_ENABLED_ENGINES` | all | Comma-separated engines to load |
+| `OCR_USE_GPU`   | auto    | `1`/`0` — use GPU (Metal/CUDA) for EasyOCR |
 | `PDF_RENDER_DPI`| `200`   | DPI for PDF-to-image conversion     |
 
 Change in `docker-compose.yml` under the `backend` service.

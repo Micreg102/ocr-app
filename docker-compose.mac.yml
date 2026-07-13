@@ -1,0 +1,22 @@
+# Mac Studio / Apple Silicon overrides
+# Usage: docker compose -f docker-compose.yml -f docker-compose.mac.yml up --build
+
+services:
+  backend:
+    platform: linux/arm64
+    environment:
+      - OCR_LANG=${OCR_LANG:-en}
+      - OCR_DEFAULT_ENGINE=${OCR_DEFAULT_ENGINE:-paddle}
+      - OCR_ENABLED_ENGINES=${OCR_ENABLED_ENGINES:-paddle,tesseract,easyocr}
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    healthcheck:
+      start_period: 120s
+      interval: 30s
+      timeout: 15s
+      retries: 5
+
+  frontend:
+    platform: linux/arm64
