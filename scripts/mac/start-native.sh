@@ -39,8 +39,8 @@ echo "Starting backend on port $BACKEND_PORT..."
 (cd backend && uvicorn app.main:app --host 0.0.0.0 --port "$BACKEND_PORT") &
 BACKEND_PID=$!
 
-echo "Starting frontend on port $FRONTEND_PORT..."
-(cd frontend && VITE_API_URL="http://localhost:${BACKEND_PORT}" npm run dev -- --host 0.0.0.0 --port "$FRONTEND_PORT") &
+echo "Starting frontend on port $FRONTEND_PORT (proxy → $BACKEND_PORT)..."
+(cd frontend && VITE_PROXY_TARGET="http://localhost:${BACKEND_PORT}" npm run dev -- --host 0.0.0.0 --port "$FRONTEND_PORT") &
 FRONTEND_PID=$!
 
 echo ""
