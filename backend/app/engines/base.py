@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Optional
 
 from PIL import Image
 
@@ -14,7 +17,7 @@ class EngineInfo:
 @dataclass(frozen=True)
 class OCRBlock:
     text: str
-    confidence: float | None
+    confidence: Optional[float]
     bbox: list[list[float]]
     box: dict[str, float]
 
