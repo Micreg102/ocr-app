@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
+const ENGINE = "easyocr";
 
 const ACCEPTED_TYPES = [
   "image/png",
@@ -12,12 +13,6 @@ const ACCEPTED_TYPES = [
 ];
 
 const ACCEPTED_EXTENSIONS = [".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".pdf"];
-
-const FALLBACK_ENGINES = [
-  { id: "paddle", name: "PaddleOCR", description: "Deep learning OCR" },
-  { id: "tesseract", name: "Tesseract", description: "Classic OCR" },
-  { id: "easyocr", name: "EasyOCR", description: "Deep learning OCR" },
-];
 
 function isAcceptedFile(file) {
   if (ACCEPTED_TYPES.includes(file.type)) return true;
@@ -36,89 +31,84 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
-  const [engines, setEngines] = useState(FALLBACK_ENGINES);
-  const [selectedEngine, setSelectedEngine] = useState("paddle");
   const inputRef = useRef(null);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/engines`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.engines?.length) {
-          setEngines(data.engines);
-          if (data.default) setSelectedEngine(data.default);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const selectedEngineInfo = engines.find((e) => e.id === selectedEngine) ?? engines[0];
-
   const reset = useCallback(() => {
+    if (preview) URL.revokeObjectURL(preview);
     setFile(null);
     setPreview(null);
     setStatus("idle");
     setResult(null);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
-  }, []);
+  }, [preview]);
 
-  const processFile = useCallback(
-    async (selectedFile) => {
+  const selectFile = useCallback(
+    (selectedFile) => {
       if (!isAcceptedFile(selectedFile)) {
-        setError("Unsupported file type. Please upload an image or PDF.");
+        setError("Nieobsługiwany typ pliku. Wyślij obraz lub PDF.");
         setStatus("error");
         return;
       }
 
+      if (preview) URL.revokeObjectURL(preview);
       setFile(selectedFile);
       setPreview(isPdf(selectedFile) ? null : URL.createObjectURL(selectedFile));
-      setStatus("uploading");
+      setStatus("ready");
       setError(null);
       setResult(null);
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("engine", selectedEngine);
-
-      try {
-        const response = await fetch(`${API_BASE}/api/ocr`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(body.detail || `Server error (${response.status})`);
-        }
-
-        const data = await response.json();
-        setResult(data);
-        setStatus("done");
-      } catch (err) {
-        setError(err.message || "OCR failed");
-        setStatus("error");
-      }
+      if (inputRef.current) inputRef.current.value = "";
     },
-    [selectedEngine]
+    [preview]
   );
+
+  const runAnalyze = useCallback(async () => {
+    if (!file) return;
+
+    setStatus("uploading");
+    setError(null);
+    setResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("engine", ENGINE);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/ocr`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.detail || `Błąd serwera (${response.status})`);
+      }
+
+      const data = await response.json();
+      setResult(data);
+      setStatus("done");
+    } catch (err) {
+      setError(err.message || "OCR nie powiodło się");
+      setStatus("error");
+    }
+  }, [file]);
 
   const handleDrop = useCallback(
     (e) => {
       e.preventDefault();
       setDragOver(false);
       const dropped = e.dataTransfer.files[0];
-      if (dropped) processFile(dropped);
+      if (dropped) selectFile(dropped);
     },
-    [processFile]
+    [selectFile]
   );
 
   const handleFileSelect = useCallback(
     (e) => {
       const selected = e.target.files[0];
-      if (selected) processFile(selected);
+      if (selected) selectFile(selected);
     },
-    [processFile]
+    [selectFile]
   );
 
   const handleDownload = useCallback(() => {
@@ -133,101 +123,90 @@ export default function App() {
     URL.revokeObjectURL(url);
   }, [result, file]);
 
-  const canInteract = status === "idle" || status === "error";
+  const isUploading = status === "uploading";
+  const canAnalyze = Boolean(file) && !isUploading;
 
   return (
     <div className="app">
       <header className="header">
         <h1>OCR App</h1>
-        <p>Drop an image or PDF to extract text</p>
+        <p>Wybierz plik, a potem kliknij Analizuj</p>
       </header>
 
       <main className="main">
-        {canInteract && (
-          <>
-            <fieldset className="engine-picker">
-              <legend className="engine-picker__legend">OCR engine</legend>
-              <div className="engine-picker__options">
-                {engines.map((engine) => (
-                  <label
-                    key={engine.id}
-                    className={`engine-option ${selectedEngine === engine.id ? "engine-option--active" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="engine"
-                      value={engine.id}
-                      checked={selectedEngine === engine.id}
-                      onChange={() => setSelectedEngine(engine.id)}
-                    />
-                    <span className="engine-option__name">{engine.name}</span>
-                    <span className="engine-option__desc">{engine.description}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+        <div className="engine-badge">
+          <span className="engine-badge__label">Silnik OCR</span>
+          <span className="engine-badge__name">EasyOCR</span>
+          <span className="engine-badge__desc">Rozpoznawanie tekstu z obrazów i PDF</span>
+        </div>
 
-            <div
-              className={`dropzone ${dragOver ? "dropzone--active" : ""}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
-            >
-              <div className="dropzone-icon">📄</div>
-              <p className="dropzone-title">Drop your file here</p>
-              <p className="dropzone-hint">Images or PDF — click to browse</p>
-              <input
-                ref={inputRef}
-                type="file"
-                accept={[...ACCEPTED_TYPES, ...ACCEPTED_EXTENSIONS].join(",")}
-                onChange={handleFileSelect}
-                hidden
-              />
-            </div>
-          </>
+        {!isUploading && (
+          <div
+            className={`dropzone ${dragOver ? "dropzone--active" : ""} ${file ? "dropzone--compact" : ""}`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
+          >
+            <div className="dropzone-icon">{file ? "🔄" : "📄"}</div>
+            <p className="dropzone-title">
+              {file ? "Zmień plik" : "Upuść plik tutaj"}
+            </p>
+            <p className="dropzone-hint">
+              {file ? file.name : "Obraz lub PDF — kliknij, aby wybrać"}
+            </p>
+            <input
+              ref={inputRef}
+              type="file"
+              accept={[...ACCEPTED_TYPES, ...ACCEPTED_EXTENSIONS].join(",")}
+              onChange={handleFileSelect}
+              hidden
+            />
+          </div>
         )}
 
-        {status === "uploading" && (
+        {file && preview && !isUploading && (
+          <img src={preview} alt="Podgląd" className="preview" />
+        )}
+
+        {file && isPdf(file) && !isUploading && (
+          <div className="pdf-preview">📕 Dokument PDF</div>
+        )}
+
+        {isUploading && (
           <div className="processing">
             {preview ? (
-              <img src={preview} alt="Preview" className="preview" />
+              <img src={preview} alt="Podgląd" className="preview" />
             ) : file && isPdf(file) ? (
-              <div className="pdf-preview">📕 PDF document</div>
+              <div className="pdf-preview">📕 Dokument PDF</div>
             ) : null}
             <div className="spinner" />
-            <p>Processing with {selectedEngineInfo?.name ?? selectedEngine}…</p>
+            <p>Analizuję plik EasyOCR…</p>
             <p className="filename">{file?.name}</p>
           </div>
         )}
 
         {status === "done" && result && (
           <div className="result">
-            {preview ? (
-              <img src={preview} alt="Preview" className="preview" />
-            ) : file && isPdf(file) ? (
-              <div className="pdf-preview">📕 PDF document</div>
-            ) : null}
-            <p className="filename">{file?.name}</p>
             <div className="result-meta">
               <span className="result-engine">{result.engine_name}</span>
               {" · "}
-              {result.page_count > 1 && <span>{result.page_count} pages · </span>}
-              {result.line_count} line{result.line_count !== 1 ? "s" : ""} detected
+              {result.page_count > 1 && <span>{result.page_count} stron · </span>}
+              {result.line_count} {result.line_count === 1 ? "linia" : "linii"}
             </div>
-            <pre className="result-text">{result.text || "(no text detected)"}</pre>
+            <pre className="result-text">{result.text || "(nie wykryto tekstu)"}</pre>
             <div className="actions">
               <button className="btn btn--download" onClick={handleDownload}>
-                Download result
+                Pobierz wynik
               </button>
               <button className="btn btn--new" onClick={reset}>
-                New file
+                Nowy plik
               </button>
             </div>
           </div>
@@ -236,11 +215,18 @@ export default function App() {
         {status === "error" && (
           <div className="error-panel">
             <p className="error-message">{error}</p>
-            <button className="btn btn--new" onClick={reset}>
-              New file
-            </button>
           </div>
         )}
+
+        <div className="analyze-bar">
+          <button
+            className="btn btn--analyze"
+            onClick={runAnalyze}
+            disabled={!canAnalyze}
+          >
+            Analizuj
+          </button>
+        </div>
       </main>
     </div>
   );

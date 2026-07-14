@@ -42,61 +42,33 @@ body {
   padding: 2rem;
 }
 
-/* Engine picker */
-.engine-picker {
-  border: none;
-  margin: 0 0 1.5rem;
-  padding: 0;
-}
-
-.engine-picker__legend {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.75rem;
-}
-
-.engine-picker__options {
+/* Engine badge */
+.engine-badge {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.engine-option {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  gap: 0 0.75rem;
-  align-items: start;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e5e7eb;
+  gap: 0.25rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.5rem;
+  border: 2px solid #3b82f6;
   border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.engine-option input {
-  margin-top: 0.2rem;
-  grid-row: 1 / 3;
-}
-
-.engine-option:hover {
-  border-color: #93c5fd;
-  background: #f9fafb;
-}
-
-.engine-option--active {
-  border-color: #3b82f6;
   background: #eff6ff;
 }
 
-.engine-option__name {
+.engine-badge__label {
+  font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.engine-badge__name {
+  font-size: 1rem;
+  font-weight: 700;
   color: #1f2937;
 }
 
-.engine-option__desc {
-  grid-column: 2;
+.engine-badge__desc {
   font-size: 0.8rem;
   color: #6b7280;
 }
@@ -132,6 +104,16 @@ body {
   margin-top: 0.5rem;
   font-size: 0.875rem;
   color: #9ca3af;
+}
+
+.dropzone--compact {
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.dropzone--compact .dropzone-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Processing */
@@ -245,6 +227,33 @@ body {
 .btn--new {
   background: #3b82f6;
   color: #fff;
+}
+
+.btn--analyze {
+  width: 100%;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 1.125rem;
+  padding: 1rem 1.75rem;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  opacity: 0.45;
+}
+
+.btn:disabled:active {
+  transform: none;
+}
+
+.analyze-bar {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Error */
