@@ -5,7 +5,7 @@ import easyocr
 import numpy as np
 from PIL import Image
 
-from .base import EngineInfo, OCREngine
+from .base import EngineInfo, OCRBlock, OCRPageResult, OCREngine, bbox_to_box
 from .lang import easyocr_langs
 
 logger = logging.getLogger(__name__)
@@ -39,6 +39,29 @@ class EasyOCREngine(OCREngine):
         self._reader = easyocr.Reader(langs, gpu=use_gpu, verbose=False)
         logger.info("EasyOCR ready")
 
+    def extract_page(self, image: Image.Image) -> OCRPageResult:
+        rgb = image.convert("RGB")
+        width, height = rgb.size
+        results = self._reader.readtext(np.array(rgb))
+        blocks: list[OCRBlock] = []
+
+        for bbox, text, confidence in results:
+            if not text:
+                continue
+            corners = [
+                [round(float(point[0]), 2), round(float(point[1]), 2)]
+                for point in bbox
+            ]
+            blocks.append(
+                OCRBlock(
+                    text=text,
+                    confidence=round(float(confidence), 4),
+                    bbox=corners,
+                    box=bbox_to_box(bbox),
+                )
+            )
+
+        return OCRPageResult(width=width, height=height, blocks=blocks)
+
     def extract_text(self, image: Image.Image) -> str:
-        results = self._reader.readtext(np.array(image.convert("RGB")))
-        return "\n".join(text for _, text, _ in results if text)
+        return self.extract_page(image).text

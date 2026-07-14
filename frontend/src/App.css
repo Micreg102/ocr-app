@@ -190,7 +190,32 @@ body {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+  margin-bottom: 1rem;
+}
+
+.positions-panel {
+  text-align: left;
   margin-bottom: 1.5rem;
+}
+
+.positions-panel summary {
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.75rem;
+}
+
+.positions-json {
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre;
 }
 
 /* Actions */
@@ -221,6 +246,11 @@ body {
 
 .btn--download {
   background: #22c55e;
+  color: #fff;
+}
+
+.btn--json {
+  background: #0f766e;
   color: #fff;
 }
 

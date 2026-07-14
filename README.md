@@ -66,11 +66,33 @@ Upload a file as `multipart/form-data`:
   "filename": "document.pdf",
   "text": "--- Page 1 ---\nextracted text...",
   "line_count": 24,
+  "block_count": 18,
   "page_count": 3,
-  "engine": "paddle",
-  "engine_name": "PaddleOCR"
+  "pages": [
+    {
+      "page": 1,
+      "width": 1654,
+      "height": 2339,
+      "blocks": [
+        {
+          "text": "Invoice",
+          "confidence": 0.9821,
+          "bbox": [[120.5, 80.0], [210.0, 80.0], [210.0, 105.5], [120.5, 105.5]],
+          "box": { "x": 120.5, "y": 80.0, "width": 89.5, "height": 25.5 }
+        }
+      ]
+    }
+  ],
+  "engine": "easyocr",
+  "engine_name": "EasyOCR"
 }
 ```
+
+Each `block` contains:
+- `text` — detected text fragment
+- `confidence` — EasyOCR confidence score (0–1)
+- `bbox` — four corner points `[[x,y], ...]` in image pixels
+- `box` — axis-aligned bounding box `{x, y, width, height}`
 
 ### `GET /api/health`
 

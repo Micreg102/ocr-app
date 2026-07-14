@@ -123,6 +123,20 @@ export default function App() {
     URL.revokeObjectURL(url);
   }, [result, file]);
 
+  const handleDownloadJson = useCallback(() => {
+    if (!result) return;
+    const baseName = (file?.name || "ocr-result").replace(/\.[^.]+$/, "");
+    const blob = new Blob([JSON.stringify(result, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${baseName}-ocr.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [result, file]);
+
   const isUploading = status === "uploading";
   const canAnalyze = Boolean(file) && !isUploading;
 
@@ -198,12 +212,25 @@ export default function App() {
               <span className="result-engine">{result.engine_name}</span>
               {" · "}
               {result.page_count > 1 && <span>{result.page_count} stron · </span>}
+              {result.block_count ?? 0} {result.block_count === 1 ? "blok" : "bloków"}
+              {" · "}
               {result.line_count} {result.line_count === 1 ? "linia" : "linii"}
             </div>
             <pre className="result-text">{result.text || "(nie wykryto tekstu)"}</pre>
+            {result.pages?.length > 0 && (
+              <details className="positions-panel">
+                <summary>Pozycje tekstu ({result.block_count ?? 0} bloków)</summary>
+                <pre className="positions-json">
+                  {JSON.stringify(result.pages, null, 2)}
+                </pre>
+              </details>
+            )}
             <div className="actions">
               <button className="btn btn--download" onClick={handleDownload}>
-                Pobierz wynik
+                Pobierz tekst
+              </button>
+              <button className="btn btn--json" onClick={handleDownloadJson}>
+                Pobierz JSON
               </button>
               <button className="btn btn--new" onClick={reset}>
                 Nowy plik

@@ -53,14 +53,38 @@ def pdf_to_images(pdf_bytes: bytes, dpi: int = PDF_RENDER_DPI) -> list[Image.Ima
     return images
 
 
-def run_ocr(images: list[Image.Image], engine_id: str) -> str:
+def block_to_dict(block) -> dict:
+    return {
+        "text": block.text,
+        "confidence": block.confidence,
+        "bbox": block.bbox,
+        "box": block.box,
+    }
+
+
+def run_ocr_pages(images: list[Image.Image], engine_id: str) -> list[dict]:
     engine = get_engine(engine_id)
+    pages: list[dict] = []
+    for index, image in enumerate(images):
+        page_result = engine.extract_page(image)
+        pages.append(
+            {
+                "page": index + 1,
+                "width": page_result.width,
+                "height": page_result.height,
+                "blocks": [block_to_dict(block) for block in page_result.blocks],
+            }
+        )
+    return pages
+
+
+def pages_to_text(pages: list[dict]) -> str:
     parts: list[str] = []
-    multi_page = len(images) > 1
-    for i, image in enumerate(images):
-        page_text = engine.extract_text(image)
+    multi_page = len(pages) > 1
+    for page in pages:
+        page_text = "\n".join(block["text"] for block in page["blocks"] if block["text"])
         if multi_page:
-            parts.append(f"--- Page {i + 1} ---")
+            parts.append(f"--- Page {page['page']} ---")
         parts.append(page_text)
     return "\n\n".join(parts)
 
@@ -118,12 +142,15 @@ async def ocr_endpoint(
             images = pdf_to_images(contents)
             if not images:
                 raise HTTPException(status_code=400, detail="PDF contains no pages")
-            text = run_ocr(images, selected_engine)
+            pages = run_ocr_pages(images, selected_engine)
             page_count = len(images)
         else:
             image = Image.open(io.BytesIO(contents)).convert("RGB")
-            text = run_ocr([image], selected_engine)
+            pages = run_ocr_pages([image], selected_engine)
             page_count = 1
+
+        text = pages_to_text(pages)
+        block_count = sum(len(page["blocks"]) for page in pages)
     except HTTPException:
         raise
     except ValueError as exc:
@@ -139,7 +166,9 @@ async def ocr_endpoint(
         "filename": file.filename,
         "text": text,
         "line_count": len(text.splitlines()) if text else 0,
+        "block_count": block_count,
         "page_count": page_count,
+        "pages": pages,
         "engine": selected_engine,
         "engine_name": engine_info.name,
     }
