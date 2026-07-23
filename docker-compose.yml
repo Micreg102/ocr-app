@@ -1,28 +1,68 @@
+# OCR App — Linux CPU-only (EasyOCR)
+# Network: alterai_default (shared with local-ai-translator)
+#
+# Usage:
+#   cp .env.example .env   # optional
+#   docker compose up -d --build
+#   docker compose --profile ui up -d --build   # + test UI
+#
+# From translator: http://ocr-backend:8000/api/ocr
+
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.cpu
+    image: ocr-app-backend:cpu
     container_name: ocr-backend
     ports:
-      - "8000:8000"
+      - "${OCR_HOST_PORT:-8000}:8000"
     environment:
-      - OCR_LANG=en
+      OCR_LANG: ${OCR_LANG:-en}
+      OCR_DEFAULT_ENGINE: ${OCR_DEFAULT_ENGINE:-easyocr}
+      OCR_ENABLED_ENGINES: ${OCR_ENABLED_ENGINES:-easyocr}
+      OCR_USE_GPU: "0"
+      PDF_RENDER_DPI: ${PDF_RENDER_DPI:-200}
+      EASYOCR_MODULE_PATH: /data/easyocr
+    volumes:
+      - ocr-easyocr-models:/data/easyocr
+    networks:
+      - alterai_default
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: ${OCR_MEMORY_LIMIT:-6G}
+        reservations:
+          memory: 1G
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
 
   frontend:
+    profiles: ["ui"]
     build:
       context: ./frontend
       args:
         VITE_API_URL: ""
+    image: ocr-app-frontend:latest
     container_name: ocr-frontend
     ports:
-      - "3000:80"
+      - "${OCR_FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - alterai_default
     restart: unless-stopped
+
+volumes:
+  ocr-easyocr-models:
+
+networks:
+  alterai_default:
+    external: true
+    name: alterai_default

@@ -29,10 +29,11 @@ docker compose up --build
 See **[DEPLOY-LINUX.md](DEPLOY-LINUX.md)**. Joins network `alterai_default`.
 
 ```bash
-./scripts/deploy-linux.sh
+git checkout linux-deploy
+cp .env.example .env   # optional
+docker compose up -d --build
 # Translator calls: http://ocr-backend:8000/api/ocr
 ```
-
 ### Mac Studio (Apple Silicon)
 
 See **[DEPLOY-MAC.md](DEPLOY-MAC.md)** for native and Docker deployment on Mac Studio.
