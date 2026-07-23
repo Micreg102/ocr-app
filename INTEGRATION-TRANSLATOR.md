@@ -23,14 +23,36 @@ Translator ma:
 
 | Środowisko | URL |
 |------------|-----|
+| **Linux VM owui01 (Docker, produkcja)** | z hosta: `http://localhost:8000` |
+| **Z kontenera translatora (`alterai_default`)** | `http://ocr-backend:8000` |
 | Mac Studio (native) | `http://localhost:8100` |
-| Frontend testowy | `http://localhost:3100` (tylko UI, nie API) |
+| Frontend testowy (Mac) | `http://localhost:3100` (tylko UI, nie API) |
 
-Port backendu jest konfigurowalny w `.env.mac` (`BACKEND_PORT`). Domyślnie na Macu: **8100** (bo 8000/3000 często zajęte).
+### Produkcja (local-ai-translator na owui01)
+
+OCR i translator muszą być w tej samej sieci Docker: **`alterai_default`**.
+
+W konfiguracji translatora ustaw:
+
+```
+OCR_API_URL=http://ocr-backend:8000
+```
+
+Endpoint OCR: `POST http://ocr-backend:8000/api/ocr`
+
+Deploy OCR: zobacz [DEPLOY-LINUX.md](DEPLOY-LINUX.md).
+
+### Mac / lokalne testy
+
+Port backendu: `.env.mac` → `BACKEND_PORT` (domyślnie **8100**).
 
 Sprawdzenie czy działa:
 
 ```bash
+# Linux / Docker
+curl http://localhost:8000/api/health
+
+# Mac native
 curl http://localhost:8100/api/health
 ```
 
@@ -38,7 +60,6 @@ Odpowiedź:
 ```json
 {"status":"ok","engines":["easyocr"]}
 ```
-
 ---
 
 ## Endpointy
@@ -60,19 +81,22 @@ Lista silników. Na Macu zwykle tylko `easyocr`.
 
 **Obsługiwane formaty:** `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.tif`, `.webp`, `.pdf`
 
-**Przykład curl:**
+**Przykład curl (z hosta owui01):**
 ```bash
-curl -X POST http://localhost:8100/api/ocr \
+curl -X POST http://localhost:8000/api/ocr \
   -F "file=@faktura.pdf"
 ```
 
-**Przykład Python:**
+**Przykład Python (z kontenera translatora):**
 ```python
 import requests
 
-url = "http://localhost:8100/api/ocr"
+# Production: Docker DNS name on alterai_default
+url = "http://ocr-backend:8000/api/ocr"
+# Local Mac tests: url = "http://localhost:8100/api/ocr"
+
 with open("faktura.pdf", "rb") as f:
-    response = requests.post(url, files={"file": f})
+    response = requests.post(url, files={"file": f}, timeout=300)
 response.raise_for_status()
 ocr_result = response.json()
 ```
@@ -82,13 +106,12 @@ ocr_result = response.json()
 const formData = new FormData();
 formData.append("file", fileInput.files[0]);
 
-const response = await fetch("http://localhost:8100/api/ocr", {
+const response = await fetch("http://ocr-backend:8000/api/ocr", {
   method: "POST",
   body: formData,
 });
 const ocrResult = await response.json();
 ```
-
 ---
 
 ## Odpowiedź — pełny schemat
@@ -285,11 +308,15 @@ Translator powinien zwrócić analogiczną strukturę z `text` przetłumaczonym,
 ## Szybki test integracji
 
 ```bash
-# 1. Health
-curl http://localhost:8100/api/health
+# 1. Health (host owui01)
+curl http://localhost:8000/api/health
+
+# 1b. Health z sieci Docker (jak translator)
+docker run --rm --network alterai_default curlimages/curl:8.5.0 \
+  http://ocr-backend:8000/api/health
 
 # 2. OCR
-curl -X POST http://localhost:8100/api/ocr \
+curl -X POST http://localhost:8000/api/ocr \
   -F "file=@test.png" \
   -o ocr-result.json
 

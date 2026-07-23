@@ -24,6 +24,15 @@ Models load on first use (lazy loading). The first request per engine downloads 
 docker compose up --build
 ```
 
+### Linux VM (owui01) — Docker CPU-only + translator
+
+See **[DEPLOY-LINUX.md](DEPLOY-LINUX.md)**. Joins network `alterai_default`.
+
+```bash
+./scripts/deploy-linux.sh
+# Translator calls: http://ocr-backend:8000/api/ocr
+```
+
 ### Mac Studio (Apple Silicon)
 
 See **[DEPLOY-MAC.md](DEPLOY-MAC.md)** for native and Docker deployment on Mac Studio.
@@ -35,7 +44,6 @@ git checkout mac
 # or
 ./scripts/deploy-docker-mac.sh   # Docker
 ```
-
 | Service  | URL                        |
 |----------|----------------------------|
 | Web UI   | http://localhost:3000      |

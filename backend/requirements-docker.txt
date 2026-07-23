@@ -1,0 +1,10 @@
+# Linux Docker CPU-only — EasyOCR (no PaddleOCR / Tesseract)
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+Pillow==11.1.0
+pymupdf==1.25.3
+easyocr==1.7.2
+# torch / torchvision installed separately from the CPU wheel index in Dockerfile.cpu

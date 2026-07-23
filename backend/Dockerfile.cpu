@@ -1,0 +1,40 @@
+# OCR App — Linux Docker CPU-only (EasyOCR)
+FROM python:3.10-slim-bookworm
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-docker.txt .
+
+# CPU-only PyTorch wheels (smaller image, no CUDA)
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.2.2 torchvision==0.17.2 \
+    && pip install --no-cache-dir -r requirements-docker.txt
+
+COPY app ./app
+
+ENV OCR_LANG=en \
+    OCR_DEFAULT_ENGINE=easyocr \
+    OCR_ENABLED_ENGINES=easyocr \
+    OCR_USE_GPU=0 \
+    PDF_RENDER_DPI=200 \
+    # EasyOCR model cache inside the container (backed by a volume in compose)
+    EASYOCR_MODULE_PATH=/data/easyocr
+
+RUN mkdir -p /data/easyocr
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

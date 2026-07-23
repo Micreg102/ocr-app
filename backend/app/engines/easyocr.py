@@ -35,8 +35,20 @@ class EasyOCREngine(OCREngine):
     def __init__(self) -> None:
         langs = easyocr_langs()
         use_gpu = _use_gpu()
-        logger.info("Loading EasyOCR (langs=%s, gpu=%s)...", langs, use_gpu)
-        self._reader = easyocr.Reader(langs, gpu=use_gpu, verbose=False)
+        module_path = os.getenv("EASYOCR_MODULE_PATH", "").strip() or None
+        logger.info(
+            "Loading EasyOCR (langs=%s, gpu=%s, module_path=%s)...",
+            langs,
+            use_gpu,
+            module_path or "~/.EasyOCR",
+        )
+        reader_kwargs = {"gpu": use_gpu, "verbose": False}
+        if module_path:
+            reader_kwargs["model_storage_directory"] = os.path.join(module_path, "model")
+            reader_kwargs["user_network_directory"] = os.path.join(module_path, "user_network")
+            os.makedirs(reader_kwargs["model_storage_directory"], exist_ok=True)
+            os.makedirs(reader_kwargs["user_network_directory"], exist_ok=True)
+        self._reader = easyocr.Reader(langs, **reader_kwargs)
         logger.info("EasyOCR ready")
 
     def extract_page(self, image: Image.Image) -> OCRPageResult:

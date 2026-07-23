@@ -25,5 +25,6 @@ Thumbs.db
 *.log
 logs/
 
-# Mac deploy
+# Mac / Linux deploy
 .env.mac
+.env.linux
