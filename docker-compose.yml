@@ -16,7 +16,7 @@ services:
     image: ocr-app-backend:cpu
     container_name: ocr-backend
     ports:
-      - "${OCR_HOST_PORT:-8000}:8000"
+      - "${OCR_HOST_PORT:-8100}:8000"
     environment:
       OCR_LANG: ${OCR_LANG:-en}
       OCR_DEFAULT_ENGINE: ${OCR_DEFAULT_ENGINE:-easyocr}

@@ -30,11 +30,11 @@ done
 echo "Starting OCR App (CPU-only)..."
 docker compose "${PROFILE_ARGS[@]}" up -d --build
 
-HOST_PORT=8000
+HOST_PORT=8100
 if [[ -f .env ]]; then
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  HOST_PORT="${OCR_HOST_PORT:-8000}"
+  HOST_PORT="${OCR_HOST_PORT:-8100}"
 fi
 
 echo ""

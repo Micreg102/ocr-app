@@ -23,7 +23,7 @@ Translator ma:
 
 | Środowisko | URL |
 |------------|-----|
-| **Linux VM owui01 (Docker, produkcja)** | z hosta: `http://localhost:8000` |
+| **Linux VM owui01 (Docker, produkcja)** | z hosta: `http://localhost:8100` |
 | **Z kontenera translatora (`alterai_default`)** | `http://ocr-backend:8000` |
 | Mac Studio (native) | `http://localhost:8100` |
 | Frontend testowy (Mac) | `http://localhost:3100` (tylko UI, nie API) |
@@ -49,8 +49,8 @@ Port backendu: `.env.mac` → `BACKEND_PORT` (domyślnie **8100**).
 Sprawdzenie czy działa:
 
 ```bash
-# Linux / Docker
-curl http://localhost:8000/api/health
+# Linux / Docker (host port)
+curl http://localhost:8100/api/health
 
 # Mac native
 curl http://localhost:8100/api/health
@@ -83,7 +83,7 @@ Lista silników. Na Macu zwykle tylko `easyocr`.
 
 **Przykład curl (z hosta owui01):**
 ```bash
-curl -X POST http://localhost:8000/api/ocr \
+curl -X POST http://localhost:8100/api/ocr \
   -F "file=@faktura.pdf"
 ```
 
@@ -309,14 +309,14 @@ Translator powinien zwrócić analogiczną strukturę z `text` przetłumaczonym,
 
 ```bash
 # 1. Health (host owui01)
-curl http://localhost:8000/api/health
+curl http://localhost:8100/api/health
 
 # 1b. Health z sieci Docker (jak translator)
 docker run --rm --network alterai_default curlimages/curl:8.5.0 \
   http://ocr-backend:8000/api/health
 
 # 2. OCR
-curl -X POST http://localhost:8000/api/ocr \
+curl -X POST http://localhost:8100/api/ocr \
   -F "file=@test.png" \
   -o ocr-result.json
 
