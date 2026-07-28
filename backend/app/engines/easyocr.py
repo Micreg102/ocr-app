@@ -54,7 +54,10 @@ class EasyOCREngine(OCREngine):
     def extract_page(self, image: Image.Image) -> OCRPageResult:
         rgb = image.convert("RGB")
         width, height = rgb.size
-        results = self._reader.readtext(np.array(rgb))
+        logger.info("EasyOCR infer start (%sx%s)", width, height)
+        # workers=0 avoids multiprocessing issues inside Docker
+        results = self._reader.readtext(np.array(rgb), workers=0)
+        logger.info("EasyOCR infer done (%s blocks)", len(results) if results else 0)
         blocks: list[OCRBlock] = []
 
         for bbox, text, confidence in results:

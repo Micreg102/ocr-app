@@ -24,20 +24,17 @@ services:
       OCR_USE_GPU: "0"
       PDF_RENDER_DPI: ${PDF_RENDER_DPI:-200}
       EASYOCR_MODULE_PATH: /data/easyocr
+      # Keep CPU inference stable on small VMs
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      TORCH_NUM_THREADS: "1"
     volumes:
       - ocr-easyocr-models:/data/easyocr
     networks:
       - alterai_default
     restart: unless-stopped
-    # Soft limit — leave headroom for translator on ~8GB VMs
-    mem_limit: ${OCR_MEMORY_LIMIT:-5g}
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
-      interval: 30s
-      timeout: 15s
-      retries: 10
-      # First EasyOCR model download can take several minutes
-      start_period: 300s
+    # No mem_limit — EasyOCR+torch spikes hard on first inference (~8GB VM)
 
   frontend:
     profiles: ["ui"]
@@ -50,8 +47,7 @@ services:
     ports:
       - "${OCR_FRONTEND_PORT:-3000}:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - alterai_default
     restart: unless-stopped
