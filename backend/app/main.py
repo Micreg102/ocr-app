@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import os
@@ -78,6 +79,20 @@ def run_ocr_pages(images: list[Image.Image], engine_id: str) -> list[dict]:
     return pages
 
 
+def process_upload(contents: bytes, ext: str, engine_id: str) -> tuple[list[dict], int]:
+    """CPU-heavy OCR work — runs in a worker thread so /api/health stays responsive."""
+    if ext in PDF_EXTENSIONS:
+        images = pdf_to_images(contents)
+        if not images:
+            raise ValueError("PDF contains no pages")
+        pages = run_ocr_pages(images, engine_id)
+        return pages, len(images)
+
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    pages = run_ocr_pages([image], engine_id)
+    return pages, 1
+
+
 def pages_to_text(pages: list[dict]) -> str:
     parts: list[str] = []
     multi_page = len(pages) > 1
@@ -138,17 +153,9 @@ async def ocr_endpoint(
     engine_info = next(e for e in ENGINE_CATALOG if e.id == selected_engine)
 
     try:
-        if ext in PDF_EXTENSIONS:
-            images = pdf_to_images(contents)
-            if not images:
-                raise HTTPException(status_code=400, detail="PDF contains no pages")
-            pages = run_ocr_pages(images, selected_engine)
-            page_count = len(images)
-        else:
-            image = Image.open(io.BytesIO(contents)).convert("RGB")
-            pages = run_ocr_pages([image], selected_engine)
-            page_count = 1
-
+        pages, page_count = await asyncio.to_thread(
+            process_upload, contents, ext, selected_engine
+        )
         text = pages_to_text(pages)
         block_count = sum(len(page["blocks"]) for page in pages)
     except HTTPException:
