@@ -1,11 +1,7 @@
-# OCR App — Linux CPU-only (EasyOCR)
+# OCR App — Linux CPU (Tesseract) for owui01
 # Network: alterai_default (shared with local-ai-translator)
 #
-# Usage:
-#   cp .env.example .env   # optional
 #   docker compose up -d --build
-#   docker compose --profile ui up -d --build   # + test UI
-#
 # From translator: http://ocr-backend:8000/api/ocr
 
 services:
@@ -19,22 +15,12 @@ services:
       - "${OCR_HOST_PORT:-8100}:8000"
     environment:
       OCR_LANG: ${OCR_LANG:-en}
-      OCR_DEFAULT_ENGINE: ${OCR_DEFAULT_ENGINE:-easyocr}
-      OCR_ENABLED_ENGINES: ${OCR_ENABLED_ENGINES:-easyocr}
-      OCR_USE_GPU: "0"
+      OCR_DEFAULT_ENGINE: ${OCR_DEFAULT_ENGINE:-tesseract}
+      OCR_ENABLED_ENGINES: ${OCR_ENABLED_ENGINES:-tesseract}
       PDF_RENDER_DPI: ${PDF_RENDER_DPI:-200}
-      EASYOCR_MODULE_PATH: /data/easyocr
-      # Keep CPU inference stable on small VMs
-      OMP_NUM_THREADS: "1"
-      MKL_NUM_THREADS: "1"
-      OPENBLAS_NUM_THREADS: "1"
-      TORCH_NUM_THREADS: "1"
-    volumes:
-      - ocr-easyocr-models:/data/easyocr
     networks:
       - alterai_default
     restart: unless-stopped
-    # No mem_limit — EasyOCR+torch spikes hard on first inference (~8GB VM)
 
   frontend:
     profiles: ["ui"]
@@ -51,9 +37,6 @@ services:
     networks:
       - alterai_default
     restart: unless-stopped
-
-volumes:
-  ocr-easyocr-models:
 
 networks:
   alterai_default:

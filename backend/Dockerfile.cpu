@@ -1,42 +1,26 @@
-# OCR App — Linux Docker CPU-only (EasyOCR)
+# OCR App — Linux Docker CPU (Tesseract)
+# EasyOCR/PyTorch is intentionally omitted: crashes on many small VMs (NNPACK / OOM).
 FROM python:3.10-slim-bookworm
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libgl1 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    tesseract-ocr-pol \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements-docker.txt .
-
-# CPU-only PyTorch wheels (smaller image, no CUDA)
-RUN pip install --no-cache-dir \
-    --index-url https://download.pytorch.org/whl/cpu \
-    torch==2.2.2 torchvision==0.17.2 \
-    && pip install --no-cache-dir -r requirements-docker.txt
+RUN pip install --no-cache-dir -r requirements-docker.txt
 
 COPY app ./app
 
 ENV OCR_LANG=en \
-    OCR_DEFAULT_ENGINE=easyocr \
-    OCR_ENABLED_ENGINES=easyocr \
-    OCR_USE_GPU=0 \
-    PDF_RENDER_DPI=200 \
-    EASYOCR_MODULE_PATH=/data/easyocr \
-    OMP_NUM_THREADS=1 \
-    MKL_NUM_THREADS=1 \
-    OPENBLAS_NUM_THREADS=1
-
-RUN mkdir -p /data/easyocr
+    OCR_DEFAULT_ENGINE=tesseract \
+    OCR_ENABLED_ENGINES=tesseract \
+    PDF_RENDER_DPI=200
 
 EXPOSE 8000
-
-# No Dockerfile HEALTHCHECK — first EasyOCR load/inference can take minutes
-# and a failing healthcheck + restart policy was killing in-flight OCR requests.
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

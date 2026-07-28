@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
-const ENGINE = "easyocr";
+const ENGINE = "tesseract";
 
 const ACCEPTED_TYPES = [
   "image/png",
@@ -150,8 +150,8 @@ export default function App() {
       <main className="main">
         <div className="engine-badge">
           <span className="engine-badge__label">Silnik OCR</span>
-          <span className="engine-badge__name">EasyOCR</span>
-          <span className="engine-badge__desc">Rozpoznawanie tekstu z obrazów i PDF</span>
+          <span className="engine-badge__name">Tesseract</span>
+          <span className="engine-badge__desc">OCR CPU — stabilny na serwerze Linux</span>
         </div>
 
         {!isUploading && (
@@ -201,7 +201,7 @@ export default function App() {
               <div className="pdf-preview">📕 Dokument PDF</div>
             ) : null}
             <div className="spinner" />
-            <p>Analizuję plik EasyOCR…</p>
+            <p>Analizuję plik Tesseract…</p>
             <p className="filename">{file?.name}</p>
           </div>
         )}
