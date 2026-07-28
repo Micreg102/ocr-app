@@ -5,7 +5,7 @@ import os
 import fitz
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from app.engines import ENGINE_CATALOG, get_engine
 
@@ -153,6 +153,12 @@ async def ocr_endpoint(
         block_count = sum(len(page["blocks"]) for page in pages)
     except HTTPException:
         raise
+    except UnidentifiedImageError as exc:
+        logger.warning("Unreadable image upload: %s", file.filename)
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or unreadable image file. Use a real PNG/JPG/PDF.",
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

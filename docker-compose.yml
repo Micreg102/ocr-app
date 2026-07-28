@@ -29,18 +29,15 @@ services:
     networks:
       - alterai_default
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: ${OCR_MEMORY_LIMIT:-6G}
-        reservations:
-          memory: 1G
+    # Soft limit — leave headroom for translator on ~8GB VMs
+    mem_limit: ${OCR_MEMORY_LIMIT:-5g}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+      timeout: 15s
+      retries: 10
+      # First EasyOCR model download can take several minutes
+      start_period: 300s
 
   frontend:
     profiles: ["ui"]
