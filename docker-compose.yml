@@ -19,7 +19,7 @@ services:
       OCR_ENABLED_ENGINES: ${OCR_ENABLED_ENGINES:-tesseract}
       PDF_RENDER_DPI: ${PDF_RENDER_DPI:-200}
     networks:
-      - alterai_default
+      - translator_default
     restart: unless-stopped
 
   frontend:
@@ -35,10 +35,10 @@ services:
     depends_on:
       - backend
     networks:
-      - alterai_default
+      - translator_default
     restart: unless-stopped
 
 networks:
-  alterai_default:
+  translator_default:
     external: true
-    name: alterai_default
+    name: translator_default
